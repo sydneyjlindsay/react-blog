@@ -4,6 +4,7 @@ Backbone.$ = $;
 
 module.exports = Backbone.Model.extend({
 	defaults: {
-		
+		postId: null, 
+		text: null
 	}
 });

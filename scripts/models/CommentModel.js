@@ -6,6 +6,7 @@ module.exports = Backbone.Model.extend({
 	defaults: {
 		text: '',
 		userId: null, 
+		postId: null,
 		createdAt: null
 	}, 
 	validate: function(attr) {
@@ -15,3 +16,5 @@ module.exports = Backbone.Model.extend({
 		return false;
 	}
 });
+
+

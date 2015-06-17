@@ -32510,72 +32510,207 @@ module.exports = require('./lib/React');
 },{"./lib/React":32}],160:[function(require,module,exports){
 'use strict';
 
-var React = require('react');
-var CommentModel = require('../models/CommentModel');
-
-module.exports = React.createClass({
-	displayName: 'exports',
-
-	render: function render() {
-		return React.createElement(
-			'form',
-			{ onSubmit: this.commentSubmitted },
-			React.createElement('input', { ref: 'commentText', type: 'text', placeholder: 'Enter a comment...' }),
-			React.createElement(
-				'button',
-				null,
-				'Submit Comment'
-			)
-		);
-	},
-	commentSubmitted: function commentSubmitted(e) {
-		e.preventDefault();
-		var comment = new CommentModel({
-			text: this.refs.commentText.getDOMNode().value,
-			createdAt: new Date()
-		});
-		if (!comment.isValid()) {
-			console.log(comment.validationError);
-		} else {
-			console.log(comment);
-		}
-	}
-});
-
-},{"../models/CommentModel":162,"react":159}],161:[function(require,module,exports){
-'use strict';
-
-var React = require('react');
-// var Hello = require('./components/Hello');
-// var InstagramImage = require('./components/InstagramImage');
-var CommentForm = require('./components/CommentForm');
-
-React.render(React.createElement(CommentForm, null),
-// <InstagramImage imageUrl="http://cdn-www.i-am-bored.com/media/thumbnails/otter[3].jpg" />,
-document.getElementById('container'));
-
-},{"./components/CommentForm":160,"react":159}],162:[function(require,module,exports){
-'use strict';
-
 var $ = require('jquery');
 var Backbone = require('backbone');
 Backbone.$ = $;
 
-module.exports = Backbone.Model.extend({
-	defaults: {
-		text: '',
-		userId: null,
-		createdAt: null
+var BlogPostModel = require('../models/BlogPostModel');
+
+module.exports = Backbone.Collection.extend({
+	model: BlogPostModel
+});
+
+},{"../models/BlogPostModel":164,"backbone":1,"jquery":4}],161:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var BlogModel = require('../models/BlogPostModel');
+
+module.exports = React.createClass({
+    displayName: 'exports',
+
+    render: function render() {
+        var chooseCategory = this.props.allCategories.map(function (category) {
+            return React.createElement(
+                'option',
+                { key: category },
+                category
+            );
+        });
+        return React.createElement(
+            'div',
+            null,
+            React.createElement(
+                'form',
+                { onSubmit: this.submitBlog },
+                React.createElement('input', { type: 'text', ref: 'blogTitle', placeholder: 'Title' }),
+                React.createElement('br', null),
+                React.createElement(
+                    'select',
+                    { ref: 'blogCategory' },
+                    ' ',
+                    chooseCategory,
+                    '>'
+                ),
+                React.createElement('br', null),
+                React.createElement('textarea', { ref: 'blogText', placeholder: 'Enter text' }),
+                React.createElement('br', null),
+                React.createElement(
+                    'button',
+                    { type: 'submit' },
+                    'Post'
+                )
+            ),
+            React.createElement('div', { ref: 'errors' })
+        );
+    },
+    submitBlog: function submitBlog(e) {
+        e.preventDefault();
+        var blogPost = new BlogModel({
+            title: this.refs.blogTitle.getDOMNode().value,
+            body: this.refs.blogText.getDOMNode().value,
+            category: this.refs.blogCategory.getDOMNode().value,
+            createdAt: new Date()
+        });
+        if (!blogPost.isValid()) {
+            this.refs.errors.getDOMNode().innerHTML = blogPost.validationError;
+        } else {
+            this.props.newPost(blogPost);
+        }
+    }
+});
+
+},{"../models/BlogPostModel":164,"react":159}],162:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var _ = require('backbone/node_modules/underscore');
+
+module.exports = React.createClass({
+	displayName: 'exports',
+
+	componentWillMount: function componentWillMount() {
+		this.props.posts.on('add', this.postAdded);
 	},
-	validate: function validate(attr) {
-		if (!attr.text) {
-			return 'You must enter a comment';
+	//this is the default number of posts to show
+	getInitialState: function getInitialState() {
+		return {
+			number: this.props.number //3 from main.js
+		};
+	},
+
+	render: function render() {
+		// sort the collection that was passed in main.js (blogPosts) by the createdAt property
+		var sortedModels = this.props.posts.sortBy(function (postModel) {
+			return -1 * postModel.get('createdAt').getTime();
+		});
+		// Grabbing topN posts from the sorted list
+		// var topNModels = this.props.posts.first(this.props.number);
+
+		// var topNModels = _.first(sortedModels, this.props.number);
+		var topNModels = _.first(sortedModels, this.state.number); //show the number that you enter in the box
+		// convert top N posts from Backbone models to react component/element,
+		//and we are left with an array of react elements
+		var topNElements = topNModels.map(function (postModel) {
+			return React.createElement(
+				'div',
+				{ key: postModel.cid },
+				React.createElement(
+					'h3',
+					null,
+					postModel.get('title')
+				),
+				React.createElement(
+					'p',
+					null,
+					postModel.get('body')
+				),
+				React.createElement(
+					'div',
+					null,
+					postModel.get('createdAt').toString(),
+					' | ',
+					postModel.get('category')
+				)
+			);
+		});
+
+		//Return the array of elements wrapped in a div
+		return React.createElement(
+			'div',
+			null,
+			React.createElement('input', { type: 'text', ref: 'number', onChange: this.numberChanged }),
+			topNElements
+		);
+	},
+
+	postAdded: function postAdded(postModel) {
+		this.forceUpdate();
+	},
+
+	numberChanged: function numberChanged(e) {
+		console.log('number was changed');
+		var newNumber = this.refs.number.getDOMNode().value;
+		if (!newNumber) {
+			newNumber = 0;
 		}
-		return false;
+		newNumber = parseInt(newNumber);
+		this.setState({
+			number: newNumber
+		});
 	}
 });
 
-},{"backbone":1,"jquery":4}]},{},[161])
+},{"backbone/node_modules/underscore":2,"react":159}],163:[function(require,module,exports){
+'use strict';
+
+var React = require('react');
+var BlogListComponent = require('./components/BlogListComponent');
+var BlogPostCollection = require('./collections/BlogPostCollection');
+var BlogFormComponent = require('./components/BlogFormComponent');
+
+var blogPosts = new BlogPostCollection([]);
+
+var allCategories = ['react', 'javascript', 'html', 'css'];
+
+function newPost(postModel) {
+	blogPosts.add(postModel);
+}
+
+React.render(React.createElement(
+	'div',
+	null,
+	React.createElement(BlogFormComponent, { allCategories: allCategories, newPost: newPost }),
+	React.createElement(BlogListComponent, { posts: blogPosts, number: 7 })
+), document.getElementById('container'));
+
+},{"./collections/BlogPostCollection":160,"./components/BlogFormComponent":161,"./components/BlogListComponent":162,"react":159}],164:[function(require,module,exports){
+'use strict';
+
+var Backbone = require('backbone');
+Backbone.$ = require('jquery');
+
+module.exports = Backbone.Model.extend({
+    defaults: {
+        category: null,
+        title: null,
+        body: '',
+        createdAt: null,
+        userId: null
+    },
+    validate: function validate(attr) {
+        if (!attr.title) {
+            return 'Enter a post title.';
+        } else if (attr.category == '') {
+            return 'Enter a post category';
+        } else if (!attr.body) {
+            return 'Enter a post body.';
+        }
+        return false;
+    }
+});
+
+},{"backbone":1,"jquery":4}]},{},[163])
 
 
 //# sourceMappingURL=all.js.map
